@@ -1,0 +1,16 @@
+# Render 蓝图：仓库连到 Render 后会自动识别这份配置
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: football-value-tracker
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 60
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # 同源访问不走 CORS；若要从别的域名调用接口，把它改成实际域名
+      - key: CORS_ORIGINS
+        value: https://football-value-tracker.onrender.com

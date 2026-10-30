@@ -61,6 +61,21 @@ football/
 - 阵型拆分数据为**估算值**（按生涯总量分摊或按位置基准推算），仅用于横向比较相对倾向，非逐场实录。
 - 本项目**仅供学习与演示用途**，数据版权归原始来源方所有，请勿用于商业用途。如涉侵权请联系删除。
 
+## ☁️ 部署到 Render
+
+仓库自带 [render.yaml](render.yaml) 蓝图，无需手写启动命令：
+
+1. 打开 <https://dashboard.render.com/blueprints>，选 **New Blueprint Instance**，关联本仓库。
+2. Render 会自动读取 `render.yaml`，创建名为 `football-value-tracker` 的免费实例。
+3. 首次构建完成后即可访问 `https://football-value-tracker.onrender.com`（免费实例闲置一段时间后会休眠，首个请求需要几十秒唤醒）。
+
+本地用生产服务器预览（Linux / macOS，Windows 不支持 gunicorn）：
+
+```bash
+pip install -r requirements.txt
+gunicorn app:app --bind 127.0.0.1:5000 --workers 2
+```
+
 ## 📄 License
 
 代码部分以 [MIT License](LICENSE) 开源；数据与队徽图片的版权见上方免责声明。
