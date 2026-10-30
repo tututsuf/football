@@ -1,5 +1,8 @@
 # ⚽ 球员身价走势与阵型表现追踪 (Football Value Tracker)
 
+[![CI](https://github.com/tututsuf/football/actions/workflows/ci.yml/badge.svg)](https://github.com/tututsuf/football/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 一个自包含的足球球员数据可视化网站：追踪 **160 名球员** 的德转身价走势、职业生涯经历与阵型表现，覆盖 **156 家俱乐部**（含队徽与世界地图分布）。
 
 中文 / English 双语界面 · 明暗双主题 · 无需构建步骤，Flask 直接跑。
@@ -61,3 +64,7 @@ football/
 ## 📄 License
 
 代码部分以 [MIT License](LICENSE) 开源；数据与队徽图片的版权见上方免责声明。
+
+## 🤝 参与贡献
+
+欢迎提交 Issue 与 PR：界面问题、数据纠错、新球员补充都可以。请先阅读 [贡献指南](CONTRIBUTING.md)，里面写了必踩的几个坑（改完前端的重启、自托管资源、双语齐全）。

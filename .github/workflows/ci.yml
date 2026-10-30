@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    name: API smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Byte-compile Python sources
+        run: python -m compileall -q app.py data scripts
+
+      - name: Smoke-test API endpoints
+        run: |
+          python - <<'PY'
+          import sys
+          from app import app
+
+          client = app.test_client()
+          urls = [
+              "/",
+              "/api/players",
+              "/api/player?id=p02",
+              "/api/formations",
+              "/api/compare?ids=p02,p25",
+              "/api/clubs",
+              "/api/i18n",
+              "/api/search-index",
+              "/api/formation-summary",
+              "/api/logos",
+              "/api/associations",
+          ]
+
+          bad = []
+          for url in urls:
+              resp = client.get(url)
+              body = resp.get_data()
+              print(f"{resp.status_code}  {len(body):>8}B  {url}")
+              if resp.status_code != 200 or not body:
+                  bad.append(url)
+
+          # 非法球员 id 必须被拒绝，而不是返回 200
+          invalid = client.get("/api/player?id=nope")
+          print(f"{invalid.status_code}  /api/player?id=nope (expect 4xx)")
+          if not 400 <= invalid.status_code < 500:
+              bad.append("/api/player?id=nope")
+
+          if bad:
+              print("SMOKE FAIL:", ", ".join(bad))
+              sys.exit(1)
+          print("SMOKE OK")
+          PY
+
+      - name: Check frontend assets are self-hosted
+        run: |
+          # 页面不得直接引用第三方 CDN，Vue / ECharts 必须走本地 vendor 目录
+          if grep -nE '<script[^>]+src="https?://' templates/index.html; then
+            echo "::error::index.html 引用了外部脚本，请改用本地 /vendor/ 资源"
+            exit 1
+          fi
+          echo "self-hosted assets OK"
