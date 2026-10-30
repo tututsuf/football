@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+
+# 应用导出产物与本地截图
+.screenshots/
+/*.png
+/*.csv

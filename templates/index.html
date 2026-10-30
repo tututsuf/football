@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>球员身价走势与阵型表现追踪 · fclogo.top 风格</title>
+<!-- 依赖自托管：不再依赖第三方 CDN（避免 CDN 故障白屏 / 被篡改），并用 SRI 校验文件完整性 -->
+<script src="/vendor/vue.global.prod.js" integrity="sha384-6pS1WSZJY7wOk6qQTa9C9U2W1/qzqL7iYoMil7qn9KFeN5fZDAwIExgCd7U5AH+X"></script>
+<script src="/vendor/echarts.custom.min.js" integrity="sha384-MO9gGzlKoQ5E/6fOdeq2l6iv3Ht4CmTXk3xJZB0o85BuvjoZ9jyQz4ir0U246y4f"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=__ASSET_V__">
+</head>
+<body>
+<div id="app">
+  <!-- ===== Header (fclogo.top style) ===== -->
+  <header class="fcl-header">
+    <div class="logo">
+      <div class="mark">⚽</div>
+      <span>{{ L.brand }}</span>
+    </div>
+    <nav role="tablist" :aria-label="L.navAria">
+      <button v-for="t in tabs" :key="t.key"
+              role="tab" :aria-selected="activeTab === t.key"
+              :class="{ active: activeTab === t.key }"
+              :style="{ '--tint': t.accent, '--tint-shadow': t.shadow }"
+              @click="switchTab(t.key)">
+        <span class="ticon">{{ t.icon }}</span>{{ t.label }}
+      </button>
+    </nav>
+    <button class="theme-btn" @click="toggleLang" :aria-pressed="lang === 'en'"
+            :aria-label="L.langAria">{{ L.langBtn }}</button>
+    <button class="theme-btn" @click="toggleTheme" :aria-pressed="isDark"
+            :aria-label="isDark ? L.themeAriaToLight : L.themeAriaToDark">{{ isDark ? L.themeLight : L.themeDark }}</button>
+    <div class="src">{{ L.source }}</div>
+  </header>
+
+  <!-- ===== Theme stage: whole page re-tints per tab ===== -->
+  <div class="tab-stage" :style="{ '--tab-accent': theme.accent, '--tab-wash': theme.wash, '--tab-wash-strong': theme.washStrong }">
+  <!-- ===== Hero + Roster: 只在身价走势 tab 显示 ===== -->
+  <div v-show="activeTab === 'trend'" class="trend-hero-wrap">
+  <!-- ===== Hero (per-tab band) ===== -->
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-kicker"><span class="hero-icon">{{ theme.icon }}</span>{{ theme.kicker }}</div>
+    <h1>{{ theme.headline }} <span class="num">{{ theme.metric }}</span></h1>
+    <div class="tagline">{{ theme.tagline }}</div>
+    <div class="hero-bar"></div>
+    <div class="stats-grid">
+      <button class="stat-cell" @click="openDetail('players')" :aria-label="tf(L.statPlayersAria, { n: players.length })">
+        <span class="go">{{ L.viewDetail }}</span>
+        <div class="big">{{ players.length }}</div><div class="lbl">{{ L.statPlayers }}</div>
+      </button>
+      <button class="stat-cell" @click="openDetail('clubs')" :aria-label="tf(L.statClubsAria, { n: clubs.length })">
+        <span class="go">{{ L.viewDetail }}</span>
+        <div class="big">{{ clubs.length || '—' }}</div><div class="lbl">{{ L.statClubs }}</div>
+      </button>
+      <button class="stat-cell" @click="openDetail('signings')" :aria-label="tf(L.statSigningsAria, { n: totalSignings })">
+        <span class="go">{{ L.viewDetail }}</span>
+        <div class="big">{{ totalSignings }}</div><div class="lbl">{{ L.statSignings }}</div>
+      </button>
+      <button class="stat-cell" @click="openDetail('formations')" :aria-label="tf(L.statFormationsAria, { n: formations.length })">
+        <span class="go">{{ L.viewDetail }}</span>
+        <div class="big">{{ formations.length }}</div><div class="lbl">{{ L.statFormations }}</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Loading / error notice ===== -->
+  <div class="section" v-if="loading || loadError" style="padding-top: 0;">
+    <div v-if="loading" class="notice loading">{{ L.loadingData }}</div>
+    <div v-else class="notice error">
+      <span>{{ loadError }}</span>
+      <button class="roster-btn" @click="retryLoad">{{ L.retry }}</button>
+    </div>
+  </div>
+
+  <!-- ===== Player roster carousel (2 x 4, rotating, distinct clubs) ===== -->
+  <div class="section">
+    <div class="roster-bar" @mouseenter="rosterPaused = true" @mouseleave="rosterPaused = false">
+      <div class="roster-head">
+        <span class="rt">{{ tf(L.rosterTitle, { n: batchSize() }) }}</span>
+        <span class="hint" v-if="!searchQuery">{{ autoPaused ? L.rosterPaused : L.rosterAuto }}</span>
+        <span class="hint" v-else>{{ tf(L.searchHits, { n: searchResults.length }) }}</span>
+        <span class="hint" v-if="!searchQuery && (filterPos || filterLeague)">{{ tf(L.filterHits, { n: filteredPlayers.length }) }}</span>
+        <span class="spacer"></span>
+        <input class="roster-input" v-model="searchQuery" :placeholder="L.searchPlaceholder"
+               type="search" :aria-label="L.searchAria" />
+        <select class="roster-select" v-model="filterPos" @change="onFilterChange" :aria-label="L.filterPosAria">
+          <option value="">{{ L.allPositions }}</option>
+          <option value="FW">{{ L.posFW }}</option>
+          <option value="MF">{{ L.posMF }}</option>
+          <option value="DF">{{ L.posDF }}</option>
+          <option value="GK">{{ L.posGK }}</option>
+        </select>
+        <select class="roster-select" v-model="filterLeague" @change="onFilterChange" :aria-label="L.filterLeagueAria">
+          <option value="">{{ L.allLeagues }}</option>
+          <option v-for="l in leagueOptions" :key="l" :value="l">{{ leagueNm(l) }}</option>
+        </select>
+        <select class="roster-select" v-model="sortBy" @change="onFilterChange" :aria-label="L.sortAria">
+          <option value="random">{{ L.sortRandom }}</option>
+          <option value="value">{{ L.sortValue }}</option>
+          <option value="age">{{ L.sortAge }}</option>
+          <option value="name">{{ L.sortName }}</option>
+        </select>
+        <button class="roster-btn" v-if="searchQuery" @click="searchQuery = ''">{{ L.clear }}</button>
+        <button class="roster-btn" v-else @click="manualShuffle()">{{ L.shuffle }}</button>
+      </div>
+
+      <!-- carousel mode: 恒为一批固定节点（桌面 8 / 移动 4），不足时用占位卡补齐防止网格塌陷 -->
+      <div v-if="!searchQuery" class="roster-grid">
+        <div v-for="(p, i) in roster" :key="batchSeq + '-' + i"
+             class="roster-card" :class="{ active: !p.__placeholder && isSelected(p.id), filler: p.__placeholder, flipped: !p.__placeholder && isFlipped(p.id), unflip: !p.__placeholder && isUnflip(p.id) }"
+             :role="p.__placeholder ? 'presentation' : 'button'" :tabindex="p.__placeholder ? undefined : 0"
+             :aria-label="p.__placeholder ? undefined : tf(L.viewPlayerAria, { name: nm(p) })"
+             :aria-pressed="p.__placeholder ? undefined : isSelected(p.id)"
+             @click="!p.__placeholder && onCardClick(p.id)"
+             @keydown.enter.prevent="!p.__placeholder && onCardClick(p.id)"
+             @keydown.space.prevent="!p.__placeholder && onCardClick(p.id)">
+          <template v-if="!p.__placeholder">
+            <div class="rc-inner" :key="'ri-' + p.id + '-' + (flipToken[p.id] || 0)" @animationend="onFlipEnd(p.id)">
+              <div class="rc-face rc-front">
+                <img v-if="p.photo_url" class="rc-avatar" :src="p.photo_url" :alt="nm(p)" loading="lazy" @error="onLogoError($event, nm(p))" />
+                <span v-else class="rc-letter">{{ nm(p).charAt(0) }}</span>
+                <div class="rn">{{ nm(p) }}</div>
+                <div class="rc">{{ clubNm(p.current_club, p.club_zh) }} · {{ posNm(p.position, p.position_zh) }}</div>
+                <div class="rv">€{{ p.current_value_m_eur }}m</div>
+              </div>
+              <div class="rc-face rc-back">
+                <img v-if="p.club_logo" :src="p.club_logo" :alt="p.current_club" loading="lazy" @error="onLogoError($event, p.current_club)" />
+                <div class="rc-back-cn">{{ clubNm(p.current_club, p.club_zh) }}</div>
+                <div class="rc-back-hint">{{ L.flipBack }}</div>
+              </div>
+            </div>
+          </template>
+          <span v-else-if="roster.findIndex(x => x.__placeholder) === i">{{ L.noMore }}</span>
+        </div>
+        <div v-if="!roster.length" class="empty-state" style="grid-column: 1 / -1;">{{ L.emptyFiltered }}</div>
+      </div>
+      <div v-else class="roster-grid scroll">
+        <div v-for="p in searchResults" :key="p.id"
+             class="roster-card" :class="{ active: isSelected(p.id), flipped: isFlipped(p.id), unflip: isUnflip(p.id) }"
+             role="button" tabindex="0" :aria-label="tf(L.viewPlayerAria, { name: nm(p) })"
+             :aria-pressed="isSelected(p.id)"
+             @click="onCardClick(p.id)"
+             @keydown.enter.prevent="onCardClick(p.id)"
+             @keydown.space.prevent="onCardClick(p.id)">
+          <div class="rc-inner" :key="'ri-' + p.id + '-' + (flipToken[p.id] || 0)" @animationend="onFlipEnd(p.id)">
+            <div class="rc-face rc-front">
+              <img v-if="p.photo_url" class="rc-avatar" :src="p.photo_url" :alt="nm(p)" loading="lazy" @error="onLogoError($event, nm(p))" />
+              <span v-else class="rc-letter">{{ nm(p).charAt(0) }}</span>
+              <div class="rn" v-html="hlName(p)"></div>
+              <div class="rc" v-html="hl(clubNm(p.current_club, p.club_zh)) + ' · ' + hl(posNm(p.position, p.position_zh))"></div>
+              <div class="rv">€{{ p.current_value_m_eur }}m</div>
+            </div>
+            <div class="rc-face rc-back">
+              <img v-if="p.club_logo" :src="p.club_logo" :alt="p.current_club" loading="lazy" @error="onLogoError($event, p.current_club)" />
+              <div class="rc-back-cn">{{ clubNm(p.current_club, p.club_zh) }}</div>
+              <div class="rc-back-hint">{{ L.flipBack }}</div>
+            </div>
+          </div>
+        </div>
+        <div v-if="!searchResults.length" class="empty-state" style="grid-column: 1 / -1;">{{ L.noMatch }}</div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /.trend-hero-wrap: hero + loading + roster 只在 trend 显示 -->
+
+  <!-- ===== Selected player banner（世界地图/职业生涯不显示：地图页只有俱乐部排行榜，职业生涯页已有 career-hero）===== -->
+  <div class="section" v-if="current">
+    <div class="player-banner" v-show="activeTab !== 'map' && activeTab !== 'career'">
+      <div class="avatar" :class="{ photo: current.photo_url }">
+        <img v-if="current.photo_url" :src="current.photo_url" :alt="currentName" loading="lazy"
+             @error="onLogoError($event, currentName)" />
+        <span v-else>{{ currentName.charAt(0) }}</span>
+      </div>
+      <div class="info">
+        <h2>{{ currentName }}</h2>
+        <div class="row">
+          <span>{{ L.pos }} <b>{{ posNm(current.position, current.position_zh) }}</b></span>
+          <span>{{ L.age }} <b>{{ current.age }}</b></span>
+          <span>{{ L.nationality }} <b>{{ natNm(current.nationality, current.nationality_zh) }}</b></span>
+          <span>{{ L.foot }} <b>{{ footNm(current.foot, current.foot_zh) }}</b></span>
+        </div>
+        <div class="row">
+          <span>{{ L.currentValue }} <b style="color: var(--tab-accent)">€{{ current.market_value_history[current.market_value_history.length-1].value_m_eur }}m</b></span>
+          <span>{{ L.peakValue }} <b>€{{ peakValue }}m</b></span>
+          <span v-if="!hasFormationData" style="color:#c8102e;font-size:12px;">{{ L.noFormationData }}</span>
+        </div>
+      </div>
+      <div class="club-badge">
+        <img v-if="current.club_logo" :src="current.club_logo" :alt="current.current_club" loading="lazy" @error="onLogoError($event, current.current_club)" />
+        <div class="cn">{{ clubNm(current.current_club, current.club_zh) }}</div>
+      </div>
+    </div>
+
+    <!-- ===== per-view header (visual hierarchy: title changes on tab switch) ===== -->
+    <div class="view-header">
+      <span class="vh-kicker">{{ L.currentView }}</span>
+      <span class="vh-title">{{ (tabs.find(t => t.key === activeTab) || tabs[0]).label }}</span>
+      <span class="vh-desc">{{ (tabs.find(t => t.key === activeTab) || tabs[0]).desc }}</span>
+    </div>
+
+    <!-- ============ Tab 1: 身价走势 ============ -->
+    <transition name="page">
+    <div v-show="activeTab === 'trend'" class="tab-panel" key="trend">
+      <div class="panel">
+        <h3>{{ tf(L.trendTitle, { name: currentName, n: current.market_value_history.length }) }}<span class="panel-tools"><span class="chart-hint">{{ L.zoomHint }}</span><button class="tool-btn" @click="exportChart('trend')">PNG</button></span></h3>
+        <div ref="trendChart" class="chart"></div>
+        <div class="legend">
+          <span>{{ L.trendLegendX }}</span>
+          <span>{{ L.trendLegendY }}</span>
+          <span>{{ L.trendLegendBand }}</span>
+          <span>{{ L.trendLegendZoom }}</span>
+          <span>{{ L.trendLegendEst }}</span>
+        </div>
+        <div class="legend" style="margin-top:8px; color:var(--muted);">
+          {{ L.dataAsOf }}
+          <b>{{ current.market_value_history[current.market_value_history.length - 1].date }}</b>
+          · {{ L.dataSourceSnapshot }}
+        </div>
+      </div>
+      <div class="panel">
+        <h3>{{ L.compareTitle }}<span class="panel-tools"><span class="chart-hint">{{ L.zoomHint }}</span><button class="tool-btn" @click="exportChart('compare')">PNG</button></span></h3>
+        <div class="chips">
+          <span v-for="p in players" :key="p.id"
+                class="chip" :class="{ on: compareIds.includes(p.id) }"
+                @click="toggleCompare(p.id)">{{ nm(p) }}</span>
+        </div>
+        <div ref="compareChart" class="chart sm"></div>
+      </div>
+    </div>
+    </transition>
+
+    <!-- ============ Tab 2: 职业生涯 ============ -->
+    <transition name="page">
+    <div v-show="activeTab === 'career'" class="tab-panel" key="career">
+      <!-- 球员大头像 + 核心信息 -->
+      <div class="panel career-hero">
+        <div class="career-hero-left">
+          <div class="career-avatar">
+            <img v-if="current.photo_url" :src="current.photo_url" :alt="currentName" loading="lazy"
+                 @error="onLogoError($event, currentName)" />
+            <span v-else>{{ currentName.charAt(0) }}</span>
+          </div>
+          <div class="career-hero-basic">
+            <h2>{{ currentName }}</h2>
+            <div class="row">
+              <span>{{ L.pos }} <b>{{ posNm(current.position, current.position_zh) }}</b></span>
+              <span>{{ L.age }} <b>{{ current.age }}</b></span>
+              <span>{{ L.nationality }} <b>{{ natNm(current.nationality, current.nationality_zh) }}</b></span>
+              <span>{{ L.foot }} <b>{{ footNm(current.foot, current.foot_zh) }}</b></span>
+            </div>
+            <div class="row" style="margin-top:6px;">
+              <span>{{ L.currentValue }} <b style="color: var(--tab-accent)">€{{ current.market_value_history[current.market_value_history.length-1].value_m_eur }}m</b></span>
+              <span>{{ L.peakValue }} <b>€{{ peakValue }}m</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="career-hero-club">
+          <img v-if="current.club_logo" :src="current.club_logo" :alt="current.current_club" loading="lazy" @error="onLogoError($event, current.current_club)" />
+          <div class="cn">{{ clubNm(current.current_club, current.club_zh) }}</div>
+        </div>
+      </div>
+
+      <!-- 生涯数据总览 -->
+      <div class="panel totals-panel" v-if="careerTotals">
+        <h3>{{ L.ctTitle }}</h3>
+        <div class="totals-grid">
+          <div class="total-cell"><b>{{ careerTotals.apps }}</b><span>{{ L.ctApps }}</span></div>
+          <div class="total-cell"><b class="tv accent">{{ careerTotals.k1 }}</b><span>{{ metricLabels().primary }}</span></div>
+          <div class="total-cell"><b>{{ careerTotals.k2 }}</b><span>{{ metricLabels().secondary }}</span></div>
+          <div class="total-cell"><b class="tv accent">{{ careerTotals.rate }}</b><span>{{ metricLabels().eff }}</span></div>
+          <div class="total-cell"><b>{{ careerTotals.clubs }}</b><span>{{ L.ctClubs }}</span></div>
+          <div class="total-cell"><b>{{ careerTotals.startYear }}–{{ bi('至今', 'present') }}</b><span>{{ L.ctSpan }}</span></div>
+        </div>
+      </div>
+
+      <!-- 职业经历 -->
+      <div class="panel">
+        <h3>{{ L.careerTitle }}<span class="panel-tools"><button class="tool-btn" @click="exportCSV('career')">CSV</button></span></h3>
+        <table class="career">
+          <thead>
+            <tr>
+              <th>{{ L.thPeriod }}</th><th>{{ L.thClub }}</th><th>{{ L.thLeague }}</th>
+              <th class="num">{{ L.thApps }}</th><th class="num">{{ metricLabels().primary }}</th><th class="num">{{ metricLabels().secondary }}</th><th class="num">{{ metricLabels().eff }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in current.career_history" :key="c.period + c.club">
+              <td>{{ c.period }}</td>
+              <td>
+                <div class="club-cell">
+                  <img v-if="c.logo_url" :src="c.logo_url" :alt="c.club" loading="lazy" @error="onLogoError($event, c.club)" />
+                  <span v-else class="ph">{{ c.club.slice(0,2) }}</span>
+                  <span>{{ clubNm(c.club, c.club_zh) }}</span>
+                </div>
+              </td>
+              <td>{{ leagueNm(c.league, c.league_zh) }}</td>
+              <td class="num">{{ c.apps ?? '—' }}</td>
+              <td class="num">{{ c[metricKeys().k1] ?? '—' }}</td>
+              <td class="num">{{ c[metricKeys().k2] ?? '—' }}</td>
+              <td class="num">{{ careerRate(c) ?? '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 各俱乐部数据对比 -->
+      <div class="panel" v-if="current.career_history && current.career_history.length">
+        <h3>{{ clubBarTitle() }}</h3>
+        <div ref="clubBarChart" class="chart club-bar-chart"></div>
+      </div>
+
+      <!-- 俱乐部足迹时间线 -->
+      <div class="panel" v-if="current.career_history && current.career_history.length">
+        <h3>{{ L.tlTitle }}</h3>
+        <div class="club-timeline">
+          <div v-for="(c, i) in current.career_history" :key="c.period + c.club" class="tl-item" :class="{ current: i === current.career_history.length - 1 }">
+            <div class="tl-dot"></div>
+            <img v-if="c.logo_url" :src="c.logo_url" :alt="c.club" loading="lazy" @error="onLogoError($event, c.club)" />
+            <span v-else class="ph-sm">{{ c.club.slice(0,2) }}</span>
+            <div class="tl-club">{{ clubNm(c.club, c.club_zh) }}</div>
+            <div class="tl-period">{{ c.period }}</div>
+            <div class="tl-meta">{{ c.apps ?? 0 }} {{ bi('场', 'apps') }} · {{ c[metricKeys().k1] ?? 0 }} {{ metricLabels().primary }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 近几年上场次数 -->
+      <div class="panel" v-if="current.career_history && current.career_history.length">
+        <h3>{{ recentAppsTitle() }}</h3>
+        <div class="recent-apps-grid">
+          <div v-for="c in current.career_history.slice(-3).reverse()" :key="c.period + c.club" class="recent-app-card">
+            <div class="ra-period">{{ c.period }}</div>
+            <div class="ra-club">
+              <img v-if="c.logo_url" :src="c.logo_url" :alt="c.club" loading="lazy" @error="onLogoError($event, c.club)" />
+              <span v-else class="ph-sm">{{ c.club.slice(0,2) }}</span>
+              <span>{{ clubNm(c.club, c.club_zh) }}</span>
+            </div>
+            <div class="ra-nums">
+              <div class="ra-num"><b>{{ c.apps ?? 0 }}</b><span>{{ bi('出场', 'Apps') }}</span></div>
+              <div class="ra-num"><b>{{ c[metricKeys().k1] ?? 0 }}</b><span>{{ metricLabels().primary }}</span></div>
+              <div class="ra-num"><b>{{ c[metricKeys().k2] ?? 0 }}</b><span>{{ metricLabels().secondary }}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </transition>
+
+    <!-- ============ Tab 3: 阵型表现 ============ -->
+    <transition name="page">
+    <div v-show="activeTab === 'formation'" class="tab-panel" key="formation">
+      <!-- 最佳位置 -->
+      <div class="panel best-position-panel">
+        <div class="bp-header">
+          <div>
+            <h3>{{ lang === 'zh' ? '最佳位置' : 'Best Position' }}</h3>
+            <div class="bp-sub">{{ bi(currentName + ' 在场上的角色定位', 'Role on the pitch') }}</div>
+          </div>
+        </div>
+        <div class="bp-body">
+          <div class="bp-position-card" :style="{ background: 'var(--tab-accent)' }">
+            <div class="bp-pg">{{ pgNm(current.position_group, current.position_group_zh) }}</div>
+            <div class="bp-pos">{{ posNm(current.position, current.position_zh) }}</div>
+          </div>
+          <div class="bp-traits">
+            <div class="bp-trait">
+              <div class="lbl">{{ bi('惯用脚', 'Preferred foot') }}</div>
+              <div class="val">{{ footNm(current.foot, current.foot_zh) }}</div>
+            </div>
+            <div class="bp-trait">
+              <div class="lbl">{{ bi('年龄', 'Age') }}</div>
+              <div class="val">{{ current.age }}{{ bi(' 岁', ' yrs') }}</div>
+            </div>
+            <div class="bp-trait">
+              <div class="lbl">{{ bi('当前身价', 'Market value') }}</div>
+              <div class="val accent">€{{ current.market_value_history[current.market_value_history.length-1].value_m_eur }}m</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阵型图 + 阵型解释 -->
+      <div class="panel pitch-panel" v-if="formationKeysShown.length">
+        <div class="pitch-header">
+          <h3>{{ lang === 'zh' ? '阵型站位' : 'Formation Layout' }}</h3>
+          <div class="pitch-selector">
+            <span v-for="f in formationKeysShown" :key="f"
+                  class="pitch-chip" :class="{ on: currentFormation === f }"
+                  @click="currentFormation = f; pitchSelectedRole = ''">{{ f }}</span>
+          </div>
+        </div>
+        <div class="pitch-body">
+          <!-- 球场 SVG -->
+          <div class="pitch-wrap">
+            <svg class="pitch-svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <linearGradient id="pitchGrass" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#4a9c5a"/>
+                  <stop offset="50%" stop-color="#3a8c4a"/>
+                  <stop offset="100%" stop-color="#2e7a3e"/>
+                </linearGradient>
+                <linearGradient id="pitchStripe" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="rgba(255,255,255,0.04)"/>
+                  <stop offset="50%" stop-color="rgba(255,255,255,0.08)"/>
+                  <stop offset="100%" stop-color="rgba(255,255,255,0.04)"/>
+                </linearGradient>
+              </defs>
+              <!-- 草地 -->
+              <rect x="1" y="1" width="98" height="98" fill="url(#pitchGrass)" rx="1"/>
+              <!-- 条纹 -->
+              <rect x="1" y="1" width="98" height="98" fill="url(#pitchStripe)" rx="1"/>
+              <!-- 边界线 -->
+              <rect x="1" y="1" width="98" height="98" fill="none" stroke="white" stroke-width="0.4" rx="1"/>
+              <!-- 中线 -->
+              <line x1="1" y1="50" x2="99" y2="50" stroke="white" stroke-width="0.3"/>
+              <!-- 中圈 -->
+              <circle cx="50" cy="50" r="10" fill="none" stroke="white" stroke-width="0.3"/>
+              <circle cx="50" cy="50" r="0.6" fill="white"/>
+              <!-- 上方禁区（进攻端） -->
+              <rect x="22" y="78" width="56" height="20" fill="none" stroke="white" stroke-width="0.3"/>
+              <rect x="36" y="88" width="28" height="10" fill="none" stroke="white" stroke-width="0.3"/>
+              <circle cx="50" cy="85" r="0.5" fill="white"/>
+              <path d="M 38 98 A 10 10 0 0 1 62 98" fill="none" stroke="white" stroke-width="0.25"/>
+              <!-- 下方禁区（防守端） -->
+              <rect x="22" y="2" width="56" height="20" fill="none" stroke="white" stroke-width="0.3"/>
+              <rect x="36" y="2" width="28" height="10" fill="none" stroke="white" stroke-width="0.3"/>
+              <circle cx="50" cy="15" r="0.5" fill="white"/>
+              <path d="M 38 2 A 10 10 0 0 0 62 2" fill="none" stroke="white" stroke-width="0.25"/>
+
+              <!-- 11 个位置点 -->
+              <g v-for="p in (formationPositions[currentFormation] || [])" :key="p.id">
+                <!-- 高亮环：当前球员位置组的点加粗 -->
+                <circle v-if="pitchDotHighlight(p.role)"
+                        :cx="p.x" :cy="p.y" r="5"
+                        :fill="pitchDotFill(p.role)" fill-opacity="0.25"/>
+                <circle :cx="p.x" :cy="p.y" r="3.2"
+                        :fill="pitchDotFill(p.role)"
+                        :stroke="pitchSelectedRole === p.role ? 'white' : 'rgba(0,0,0,0.3)'"
+                        :stroke-width="pitchSelectedRole === p.role ? 1.2 : (pitchDotHighlight(p.role) ? 0.8 : 0.4)"
+                        class="pitch-dot"
+                        @click="pitchSelectedRole = pitchSelectedRole === p.role ? '' : p.role"/>
+                <text :x="p.x" :y="p.y + 0.8" text-anchor="middle"
+                      fill="white" :font-size="roleLabel(p.role).length > 2 ? 1.8 : 2.2"
+                      font-weight="600" pointer-events="none">{{ roleLabel(p.role) }}</text>
+              </g>
+            </svg>
+            <!-- 图例 -->
+            <div class="pitch-legend">
+              <span class="lg-item"><i class="lg-dot" style="background:#1d70b8"></i>{{ pgNm('GK') }}</span>
+              <span class="lg-item"><i class="lg-dot" style="background:#2e8b3d"></i>{{ pgNm('DF') }}</span>
+              <span class="lg-item"><i class="lg-dot" style="background:#d29922"></i>{{ pgNm('MF') }}</span>
+              <span class="lg-item"><i class="lg-dot" style="background:#c8102e"></i>{{ pgNm('FW') }}</span>
+              <span class="lg-hint">{{ lang === 'zh' ? '点击位置圆点查看职责说明' : 'Tap a dot to see its role' }}</span>
+            </div>
+          </div>
+
+          <!-- 阵型解释 + 职责气泡 -->
+          <div class="pitch-info">
+            <div class="pitch-note">
+              <div class="pn-label">{{ bi('阵型说明', 'Formation note') }}</div>
+              <div class="pn-text">{{ formationNoteFor(currentFormation) }}</div>
+            </div>
+            <div class="pitch-duty" v-if="pitchSelectedRole">
+              <div class="pd-label">{{ roleLabel(pitchSelectedRole) }} · {{ bi('位置职责', 'Role duty') }}</div>
+              <div class="pd-text">{{ pitchSelectedDuty() }}</div>
+            </div>
+            <div class="pitch-duty empty" v-else>
+              <div class="pd-hint">{{ bi('点击左侧球场上的任意位置圆点，查看该位置的详细职责说明。被加粗高亮的位置点属于当前球员的位置组。', 'Tap any dot on the pitch to read that role in detail. Emphasised dots belong to this player\'s position group.') }}</div>
+            </div>
+            <!-- 阵型基础数据 -->
+            <div class="pitch-stats" v-if="formationPerf(currentFormation)">
+              <div class="ps-row"><span>{{ bi('出场', 'Apps') }}</span><b>{{ formationPerf(currentFormation)?.apps || 0 }}</b></div>
+              <div class="ps-row"><span>{{ metricLabels().primary }}</span><b>{{ formationPerf(currentFormation)?.[metricKeys().k1] || 0 }}</b></div>
+              <div class="ps-row"><span>{{ metricLabels().secondary }}</span><b>{{ formationPerf(currentFormation)?.[metricKeys().k2] || 0 }}</b></div>
+              <div class="ps-row"><span>{{ bi('场均评分', 'Avg rating') }}</span><b>{{ formationPerf(currentFormation)?.avg_rating?.toFixed(2) || '—' }}</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 最适配阵容 -->
+      <div class="panel" v-if="formationPerfVisible && current.formation_performance">
+        <h3>{{ lang === 'zh' ? '最适配阵容' : 'Best Formation' }}</h3>
+        <div class="bf-wrap">
+          <!-- 最佳阵型高亮 -->
+          <div class="bf-best">
+            <div class="bf-best-formation">{{ bestFormationKey }}</div>
+            <div class="bf-best-rating">{{ bestFormationRating }} <span>{{ bi('场均评分', 'avg rating') }}</span></div>
+            <div class="bf-best-meta">{{ bi('出场', 'Apps') }} {{ bestFormationApps }} · {{ metricLabels().primary }} {{ bestFormationPrimary }} · {{ metricLabels().secondary }} {{ bestFormationSecondary }}</div>
+          </div>
+          <!-- 全阵型对比条 -->
+          <div class="bf-bars">
+            <div v-for="f in formationKeysShown" :key="f" class="bf-bar-row"
+                 :class="{ bfBarBest: bestFormationKey === f }">
+              <span class="bf-bar-label">{{ f }}</span>
+              <div class="bf-bar-track">
+                <div class="bf-bar-fill" :style="{ width: (formationPerf(f)?.avg_rating ? (formationPerf(f).avg_rating / 10 * 100) : 0) + '%' }"></div>
+              </div>
+              <span class="bf-bar-val">{{ formationPerf(f)?.avg_rating?.toFixed(2) || '—' }}</span>
+              <span class="bf-bar-sub">{{ formationPerf(f)?.apps || 0 }}{{ bi('场', ' apps') }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="formation-note">{{ formationNoteText }}</div>
+        <div class="legend" style="margin-top:8px;">
+          <span>{{ L.formationNoteDisclaimer }}</span>
+        </div>
+      </div>
+      <div class="panel" v-else>
+        <div class="empty-state">{{ formationNoDataText }}</div>
+      </div>
+
+      <!-- 各阵型位置差异化指标 / 评分对比（ECharts 对比图） -->
+      <div class="panel" v-if="formationPerfVisible && current.formation_performance">
+        <h3>{{ (lang === 'zh' ? '各阵型' : '') + metricLabels().primary + ' / ' + metricLabels().secondary + (lang === 'zh' ? ' / 评分对比' : ' / rating by formation') }}<span class="panel-tools"><span class="chart-hint">{{ L.zoomHint }}</span><button class="tool-btn" @click="exportChart('formation')">PNG</button></span></h3>
+        <div ref="formationChart" class="chart sm"></div>
+        <div class="legend" v-if="metricLabels().gkHint"><span>{{ metricLabels().gkHint }}</span></div>
+      </div>
+
+      <!-- 阵型效率（位置差异化） -->
+      <div class="panel" v-if="formationPerfVisible && current.formation_performance">
+        <h3>{{ (lang === 'zh' ? '阵型效率 · ' : 'Efficiency · ') + metricLabels().eff }}<span class="panel-tools"><span class="chart-hint">{{ L.zoomHint }}</span><button class="tool-btn" @click="exportChart('efficiency')">PNG</button></span></h3>
+        <div ref="efficiencyChart" class="chart sm"></div>
+      </div>
+    </div>
+    </transition>
+
+    <!-- ============ Tab 4: 世界地图 ============ -->
+    <transition name="page">
+    <div v-show="activeTab === 'map'" class="tab-panel" key="map">
+      <!-- 世界地图（ECharts geo scatter） -->
+      <div class="panel">
+        <h3>{{ L.mapTitle }}<span class="panel-tools"><span class="chart-hint">{{ L.zoomHint }}</span><button class="tool-btn" @click="exportChart('worldMap')">PNG</button></span></h3>
+        <div class="map-controls">
+          <label>{{ L.mapYearLabel }}</label>
+          <select v-model="mapYearFrom" @change="onMapYearChange">
+            <option value="2017">2017+</option><option value="2018">2018+</option>
+            <option value="2019">2019+</option><option value="2020">2020+</option>
+            <option value="2021">2021+</option><option value="2022">2022+</option>
+            <option value="2023">2023+</option>
+          </select>
+          <span class="stat">{{ tf(L.mapStat, { clubs: clubs.length, signings: totalSignings }) }}</span>
+        </div>
+        <div ref="worldMap" class="chart" style="height: 520px;"></div>
+        <!-- 选中俱乐部的引援详情 -->
+        <div v-if="selectedClub && selectedClub.recent_signings && selectedClub.recent_signings.length" class="signings-panel" style="margin-top:16px;">
+          <h4>{{ L.selectedClubSignings }} · {{ clubNm(selectedClub.club, selectedClub.zh_name) }}</h4>
+          <div class="club-head">
+            <img v-if="selectedClub.club_logo" :src="selectedClub.club_logo" :alt="selectedClub.club" loading="lazy" @error="onLogoError($event, selectedClub.club)" />
+            <span v-else class="ph">{{ clubNm(selectedClub.club, selectedClub.zh_name).slice(0,2) }}</span>
+            <div class="meta">{{ leagueNm(selectedClub.league) }} · {{ cityNm(selectedClub.city) }}, {{ countryNm(selectedClub.country) }} · {{ tf(L.chartSigningsInline, { n: selectedClub.signings_count || 0 }) }}</div>
+          </div>
+          <table class="career" style="max-height:360px;">
+            <thead><tr><th>{{ L.thPeriod }}</th><th>{{ L.thPlayer }}</th><th>{{ L.thFromClub }}</th></tr></thead>
+            <tbody>
+              <tr v-for="s in selectedClub.recent_signings" :key="s.player_name + s.period">
+                <td>{{ s.period }}</td>
+                <td>{{ lang === 'zh' ? (s.player_name_zh || s.player_name) : s.player_name }}</td>
+                <td>{{ clubNm(s.prev_club, s.prev_club_zh) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 近年引援俱乐部排行榜 -->
+      <div class="panel">
+        <div class="rank-header">
+          <div>
+            <h3>{{ lang === 'zh' ? '近年引援俱乐部排行榜' : 'Transfer Leaderboard' }}</h3>
+            <div class="rank-sub">{{ tf(L.rankSub, { clubs: clubs.length, signings: totalSignings, year: mapYearFrom }) }}</div>
+          </div>
+          <div class="rank-tabs">
+            <span class="rank-tab on">{{ L.cSortSignings }}</span>
+          </div>
+        </div>
+        <div class="rank-list">
+          <div v-for="(c, i) in (clubs || []).slice().sort((a,b) => (b.signings_count||0) - (a.signings_count||0)).slice(0, 20)"
+               :key="c.club_id || c.club + c.league" class="rank-row" @click="openClub(c)">
+            <div class="rank-num" :class="{ 'rankTop': i < 3 }">{{ i + 1 }}</div>
+            <div class="rank-logo">
+              <img v-if="c.club_logo" :src="c.club_logo" :alt="c.club" loading="lazy" @error="onLogoError($event, c.club)" />
+              <span v-else class="ph-sm">{{ clubNm(c.club, c.zh_name).slice(0,2) }}</span>
+            </div>
+            <div class="rank-info">
+              <div class="rank-nm">{{ clubNm(c.club, c.zh_name) }}</div>
+              <div class="rank-meta">{{ leagueNm(c.league) }} · {{ cityNm(c.city) }}, {{ countryNm(c.country) }}</div>
+            </div>
+            <div class="rank-num-signings">
+              <div class="rank-s-big">{{ c.signings_count || 0 }}</div>
+              <div class="rank-s-sub">{{ L.signingsShort }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </transition>
+  </div>
+  </div><!-- /tab-stage -->
+
+  <!-- ===== KPI detail page: 点击顶部四个指标框进入 ===== -->
+  <transition name="page">
+  <div v-if="detail" class="detail-page" tabindex="-1" ref="detailPageEl"
+       @keydown.esc="closeDetail"
+       :style="{ '--tab-accent': theme.accent, '--tab-wash': theme.wash, '--tab-wash-strong': theme.washStrong }">
+    <div class="detail-head">
+      <button class="detail-back" @click="closeDetail">{{ L.back }}</button>
+      <div class="detail-title">
+        <div class="detail-kicker">{{ detailMeta.kicker }}</div>
+        <h2>{{ detailMeta.title }} <span class="num">{{ detailMeta.metric }}</span></h2>
+        <div class="sub">{{ detailMeta.sub }}</div>
+      </div>
+      <button class="detail-close" @click="closeDetail" :aria-label="L.closeAria">×</button>
+    </div>
+
+    <!-- ---------- 1. 追踪球员 ---------- -->
+    <div v-if="detail === 'players'" class="detail-body">
+      <div class="detail-tools">
+        <input class="roster-input" v-model="dQuery" :placeholder="L.dSearchPlaceholder" />
+        <select class="roster-select" v-model="dPos">
+          <option value="">{{ L.allPositions }}</option>
+          <option v-for="g in ['FW','MF','DF','GK']" :key="g" :value="g">{{ pgNm(g) }}</option>
+        </select>
+        <select class="roster-select" v-model="dLeague">
+          <option value="">{{ L.allLeagues }}</option>
+          <option v-for="l in leagueOptions" :key="l" :value="l">{{ leagueNm(l) }}</option>
+        </select>
+        <select class="roster-select" v-model="dSort">
+          <option value="value">{{ L.dSortValue }}</option>
+          <option value="age">{{ L.dSortAge }}</option>
+          <option value="name">{{ L.dSortName }}</option>
+        </select>
+        <span class="detail-count">{{ tf(L.dCount, { a: dPlayers.length, b: players.length }) }}</span>
+      </div>
+      <div class="detail-kpis">
+        <div class="detail-kpi"><div class="k">{{ L.kAvgAge }}</div><div class="v">{{ dPlayers.length ? tf(L.ageUnit, { n: (dPlayers.reduce((s,p) => s + p.age, 0) / dPlayers.length).toFixed(1) }) : '—' }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kValueSum }}</div><div class="v">€{{ (dPlayers.reduce((s,p) => s + (p.current_value_m_eur || 0), 0)).toFixed(0) }}m</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kTopValue }}</div><div class="v">{{ dTopPlayer ? nm(dTopPlayer) : '—' }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kLeagues }}</div><div class="v">{{ new Set(dPlayers.map(p => p.league).filter(Boolean)).size }}</div></div>
+      </div>
+      <div class="detail-list" v-if="dPlayers.length">
+        <button class="d-row" v-for="p in dPlayers" :key="p.id" @click="openPlayer(p.id)">
+          <img v-if="p.club_logo" class="badge" :src="p.club_logo" :alt="p.current_club" loading="lazy" @error="onLogoError($event, p.current_club)" />
+          <span v-else class="ph2">{{ nm(p).slice(0,2) }}</span>
+          <span class="nm">{{ nm(p) }}</span>
+          <span class="tag" :class="p.position_group.toLowerCase()">{{ pgNm(p.position_group, p.position_group_zh) }}</span>
+          <span class="club">{{ clubNm(p.current_club, p.club_zh) }}</span>
+          <span class="nat">{{ natNm(p.nationality, p.nationality_zh) }}</span>
+          <span class="age">{{ tf(L.ageUnit, { n: p.age }) }}</span>
+          <span class="val">€{{ p.current_value_m_eur }}m</span>
+        </button>
+      </div>
+      <div v-else class="detail-empty">{{ L.dNoPlayers }}</div>
+    </div>
+
+    <!-- ---------- 2. 收录俱乐部 ---------- -->
+    <div v-if="detail === 'clubs'" class="detail-body">
+      <div class="detail-tools">
+        <input class="roster-input" v-model="cQuery" :placeholder="L.cSearchPlaceholder" />
+        <select class="roster-select" v-model="cCountry">
+          <option value="">{{ L.allCountries }}</option>
+          <option v-for="c in countryOptions" :key="c" :value="c">{{ countryNm(c) }}</option>
+        </select>
+        <select class="roster-select" v-model="cLeague">
+          <option value="">{{ L.allLeagues }}</option>
+          <option v-for="l in clubLeagueOptions" :key="l" :value="l">{{ leagueNm(l) }}</option>
+        </select>
+        <select class="roster-select" v-model="cSort">
+          <option value="signings">{{ L.cSortSignings }}</option>
+          <option value="name">{{ L.cSortName }}</option>
+        </select>
+        <span class="detail-count">{{ tf(L.cCount, { a: cClubs.length, b: clubs.length }) }}</span>
+      </div>
+      <div class="detail-kpis">
+        <div class="detail-kpi"><div class="k">{{ L.kCountries }}</div><div class="v">{{ new Set(clubs.map(c => c.country)).size }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kWithSignings }}</div><div class="v">{{ tf(L.clubCountUnit, { n: clubs.filter(c => c.signings_count > 0).length }) }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kAvgSignings }}</div><div class="v">{{ clubs.length ? tf(L.signingsCountUnit, { n: (totalSignings / clubs.length).toFixed(1) }) : '—' }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kMostSignings }}</div><div class="v" style="font-size:15px;">{{ cTopClub ? clubNm(cTopClub.club, cTopClub.zh_name) : '—' }}</div></div>
+      </div>
+      <div class="detail-list" v-if="cClubs.length">
+        <button class="d-row" v-for="c in cClubs" :key="c.club_id" @click="openClub(c)">
+          <img v-if="c.club_logo" class="badge" :src="c.club_logo" :alt="c.club" loading="lazy" @error="onLogoError($event, c.club)" />
+          <span v-else class="ph2">{{ clubNm(c.club, c.zh_name).slice(0,2) }}</span>
+          <span class="nm">{{ clubNm(c.club, c.zh_name) }}</span>
+          <span class="tag">{{ leagueNm(c.league) }}</span>
+          <span class="club">{{ cityNm(c.city) }}, {{ countryNm(c.country) }}</span>
+          <span class="nat">{{ stadiumNm(c.stadium) }}</span>
+          <span class="age">{{ tf(L.signingsCountUnit, { n: c.signings_count }) }}</span>
+          <span class="val">{{ L.mapView }}</span>
+        </button>
+      </div>
+      <div v-else class="detail-empty">{{ L.dNoClubs }}</div>
+    </div>
+
+    <!-- ---------- 3. 近年引援 ---------- -->
+    <div v-if="detail === 'signings'" class="detail-body">
+      <div class="detail-tools">
+        <input class="roster-input" v-model="sQuery" :placeholder="L.sSearchPlaceholder" />
+        <select class="roster-select" v-model="sYear">
+          <option value="">{{ L.allYears }}</option>
+          <option v-for="y in signingYears" :key="y" :value="y">{{ tf(L.yearFrom, { y }) }}</option>
+        </select>
+        <span class="detail-count">{{ tf(L.sCount, { a: sSignings.length, b: allSignings.length }) }}</span>
+      </div>
+      <div class="detail-kpis">
+        <div class="detail-kpi"><div class="k">{{ L.kTotalSignings }}</div><div class="v">{{ allSignings.length }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kClubsInvolved }}</div><div class="v">{{ new Set(allSignings.map(s => s.club)).size }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kSigningValueSum }}</div><div class="v">€{{ allSignings.reduce((s,x) => s + (x.current_value_m_eur || 0), 0).toFixed(0) }}m</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kTopSigning }}</div><div class="v" style="font-size:15px;">{{ sTopSigning ? playerName(sTopSigning) : '—' }}</div></div>
+      </div>
+      <table class="d-table" v-if="sSignings.length">
+        <thead>
+          <tr><th>{{ L.thPlayer }}</th><th>{{ L.thToClub }}</th><th>{{ L.thFromClub }}</th><th>{{ L.thPeriod }}</th><th>{{ L.thPosition }}</th><th class="num">{{ L.thCurrentValue }}</th></tr>
+        </thead>
+        <tbody>
+          <tr v-for="(s, i) in sSignings" :key="s.player_id + i" @click="openPlayer(s.player_id)">
+            <td>{{ playerName(s) }}</td>
+            <td>{{ clubNm(s.club, s.clubZh) }}</td>
+            <td>{{ clubNm(s.prev_club, s.prev_club_zh) }}</td>
+            <td>{{ s.period }}</td>
+            <td>{{ posNm(s.player_position, s.player_position_zh) }}</td>
+            <td class="val">€{{ s.current_value_m_eur }}m</td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-else class="detail-empty">{{ L.dNoSignings }}</div>
+    </div>
+
+    <!-- ---------- 4. 阵型对比 ---------- -->
+    <div v-if="detail === 'formations'" class="detail-body">
+      <div class="detail-kpis">
+        <div class="detail-kpi"><div class="k">{{ L.kFormationCount }}</div><div class="v">{{ formations.length }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kFormationPlayers }}</div><div class="v">{{ tf(L.playerCountUnit, { n: formationDataPlayers }) }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kFormationApps }}</div><div class="v">{{ formationTotals.apps }}</div></div>
+        <div class="detail-kpi"><div class="k">{{ L.kFormationContrib }}</div><div class="v">{{ formationTotals.goal_contrib }}</div></div>
+      </div>
+      <div class="d-cards">
+        <button class="d-card" v-for="f in formationSummary" :key="f.formation"
+                :class="{ active: formationCurrentKey === f.formation }"
+                @click="formationCurrentKey = f.formation">
+          <div class="fhead">
+            <span class="fname">{{ f.formation }}</span>
+            <span class="fmeta">{{ tf(L.fCardMeta, { n: f.players, r: f.avg_rating ?? '—' }) }}</span>
+          </div>
+          <div class="fnote">{{ formationNoteFor(f.formation) }}</div>
+          <!-- 迷你球场缩略图（只显示阵型形状） -->
+          <div class="f-pitch-mini">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+              <rect x="1" y="1" width="98" height="98" fill="#3a8c4a" rx="1"/>
+              <rect x="1" y="1" width="98" height="98" fill="none" stroke="white" stroke-width="0.5" rx="1"/>
+              <line x1="1" y1="50" x2="99" y2="50" stroke="white" stroke-width="0.4"/>
+              <circle cx="50" cy="50" r="10" fill="none" stroke="white" stroke-width="0.4"/>
+              <g v-for="p in (formationPositions[f.formation] || [])" :key="p.id">
+                <circle :cx="p.x" :cy="p.y" r="3.5"
+                        :fill="pitchDotFill(p.role)"
+                        stroke="rgba(0,0,0,0.3)" stroke-width="0.4"/>
+              </g>
+            </svg>
+          </div>
+          <div class="fstats">
+            <div><div class="fk">{{ L.fApps }}</div><div class="fv">{{ f.apps }}</div></div>
+            <div><div class="fk">{{ L.fGoals }}</div><div class="fv">{{ f.goals }}</div></div>
+            <div><div class="fk">{{ L.fAssists }}</div><div class="fv">{{ f.assists }}</div></div>
+            <div><div class="fk">{{ L.fContrib }}</div><div class="fv">{{ f.goal_contrib }}</div></div>
+          </div>
+          <span class="fgo">{{ L.fOpen }}</span>
+        </button>
+      </div>
+      <div v-if="formationLoading" class="detail-empty">{{ L.formationLoading }}</div>
+      <template v-if="!formationLoading && formationCurrent">
+        <div class="d-section-title">
+          {{ tf(L.fContributors, { f: formationCurrent.formation }) }}
+          <button class="tool-btn" style="margin-left:8px;" @click="openFormationTab(formationCurrent.formation)">{{ L.viewInFormation }}</button>
+        </div>
+        <div class="detail-list">
+          <button class="d-row" v-for="p in formationCurrent.contributors" :key="p.id" @click="openPlayer(p.id)">
+            <img v-if="p.club_logo" class="badge" :src="p.club_logo" :alt="p.current_club" loading="lazy" @error="onLogoError($event, p.current_club)" />
+            <span v-else class="ph2">{{ clubNmOfPlayer(p).slice(0,2) }}</span>
+            <span class="nm">{{ nm(p) }}</span>
+            <span class="tag" :class="p.position_group.toLowerCase()">{{ pgNm(p.position_group) }}</span>
+            <span class="club">{{ clubNmOfPlayer(p) }}</span>
+            <span class="nat">{{ tf(L.rating, { r: p.avg_rating ?? '—' }) }}</span>
+            <span class="age">{{ tf(L.appsUnit, { n: p.apps }) }}</span>
+            <span class="val">{{ contribMetric(p) }}</span>
+          </button>
+        </div>
+      </template>
+      <div class="legend" style="margin-top:14px;">
+        <span>{{ L.formationDisclaimer }}</span>
+      </div>
+    </div>
+
+    <!-- ---------- 底部固定关闭按钮（始终可见，移动端友好） ---------- -->
+    <div class="detail-foot">
+      <button @click="closeDetail" :aria-label="L.backHomeAria">{{ L.backHome }}</button>
+    </div>
+  </div>
+  </transition>
+
+  <!-- ===== 回到顶部（长页面滚过一屏后出现） ===== -->
+  <button v-if="showTop" class="to-top" @click="scrollTop" :aria-label="L.backToTopAria" :title="L.backToTop">
+    <span class="to-top-arrow" aria-hidden="true">↑</span>
+    <span class="to-top-label">{{ L.backToTop }}</span>
+  </button>
+</div>
+
+  <script src="/app.js?v=__ASSET_V__"></script>
+</body>
+</html>

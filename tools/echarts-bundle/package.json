@@ -1,0 +1,12 @@
+{
+  "name": "echarts-bundle",
+  "private": true,
+  "description": "按需打包 ECharts（只含本项目用到的图表与组件），产物输出到 templates/vendor/",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "echarts": "5.5.0",
+    "esbuild": "^0.24.0"
+  }
+}
