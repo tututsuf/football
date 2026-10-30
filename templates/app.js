@@ -148,11 +148,35 @@ createApp({
         chartGoals: "进球", chartAssists: "助攻", chartPer90: "场均造球",
         chartClubsSeries: "俱乐部", chartSigningsInline: "近年引援: {n} 笔",
         careerSeries: "身价走势",
+        cmpTitle: "球员对比 · 同位置最多 5 人",
+        cmpPickGroup: "位置组",
+        cmpSearchPlaceholder: "搜索姓名 / 俱乐部 / 国籍 / 拼音首字母…",
+        cmpSearchAria: "搜索要对比的球员",
+        cmpSelected: "已选择",
+        cmpCount: "已选 {n}/{max}",
+        cmpNoneSelected: "尚未选择球员",
+        cmpMax: "最多同时对比 5 名球员，请先取消一人再添加",
+        cmpClear: "清空选择",
+        cmpRule: "同位置组对比 · 上限 5 人",
+        cmpNoCandidate: "该位置组下没有匹配的球员",
+        cmpSummary: "总览对比",
+        cmpNeedTwo: "至少选择 2 名同位置球员开始对比",
+        cmpRatingTitle: "场均评分对比",
+        cmpOutputTitle: "场均位置指标对比",
+        cmpPerGame: "按场均折算",
+        cmpFormSection: "阵型数据比较",
+        cmpFormSub: "总产出与评分",
+        cmpPerGameSection: "场均数据比较",
+        cmpEmpty: "暂无可对比的阵型数据",
+        cmpWeighted: "加权评分",
+        cmpTotalApps: "总出场",
+        cmpBest: "最佳阵型",
         tabs: {
           trend: { label: "身价走势", kicker: "身价时间轴", headline: "身价起伏，一目了然", tagline: "德转身价历史曲线 · 背景色带标注当时所属俱乐部 · 横轴可缩放拖拽", desc: "德转身价历史曲线，背景色块标注当时所属俱乐部" },
           career: { label: "职业生涯", kicker: "生涯轨迹", headline: "逐站回看，每段旅程", tagline: "按俱乐部逐段梳理出场 / 进球 / 助攻 · 队徽标注转会节点 · 单一曲线看身价轨迹", desc: "逐俱乐部出场/进球/助攻，队徽标注转会节点" },
           formation: { label: "阵型表现", kicker: "战术适配", headline: "换阵型，换一种活法", tagline: "四套主流阵型下的赛季累计数据 · 场均评分与场均造球效率对比", desc: "四套战术下赛季累计数据与效率对比" },
           map: { label: "世界地图", kicker: "全球转会网络", headline: "球员流动，画在地图上", tagline: "俱乐部地理位置与近年引援网络 · 悬停看队徽 · 点击查看该队引援详情", desc: "俱乐部地理位置与近年引援网络，悬停看队徽、点查看转会" },
+          compare: { label: "球员对比", kicker: "同位置横评", headline: "同一位置，五种答案", tagline: "四套阵型下的场均评分与位置差异化产出 · 最多同时对比 5 名同位置球员", desc: "同位置最多 5 人，四套阵型评分与产出一览" },
         },
       },
       en: {
@@ -291,11 +315,35 @@ createApp({
         chartGoals: "Goals", chartAssists: "Assists", chartPer90: "Goal contributions per game",
         chartClubsSeries: "Clubs", chartSigningsInline: "Recent signings: {n}",
         careerSeries: "Value trajectory",
+        cmpTitle: "Player comparison · up to 5 per position",
+        cmpPickGroup: "Position group",
+        cmpSearchPlaceholder: "Search name / club / nationality / pinyin initials…",
+        cmpSearchAria: "Search players to compare",
+        cmpSelected: "Selected",
+        cmpCount: "Selected {n}/{max}",
+        cmpNoneSelected: "No players selected yet",
+        cmpMax: "Up to 5 players can be compared — remove one before adding another",
+        cmpClear: "Clear selection",
+        cmpRule: "Same position group · max 5 players",
+        cmpNoCandidate: "No players match in this position group",
+        cmpSummary: "Overview",
+        cmpNeedTwo: "Pick at least 2 players from the same position group to start comparing",
+        cmpRatingTitle: "Average rating by formation",
+        cmpOutputTitle: "Position-specific output per game",
+        cmpPerGame: "Per-appearance average",
+        cmpFormSection: "Formation Comparison",
+        cmpFormSub: "Output & rating",
+        cmpPerGameSection: "Per-game Comparison",
+        cmpEmpty: "No formation data to compare yet",
+        cmpWeighted: "Weighted rating",
+        cmpTotalApps: "Total apps",
+        cmpBest: "Best formation",
         tabs: {
           trend: { label: "Value Trend", kicker: "Market Value Timeline", headline: "Every rise and fall, at a glance", tagline: "Transfermarkt value history · background bands mark the club at the time · zoom and pan the time axis", desc: "Transfermarkt value history with club bands" },
           career: { label: "Career", kicker: "Career Path", headline: "Every stop, every chapter", tagline: "Club-by-club apps / goals / assists · crests mark transfer points · one line for the value trajectory", desc: "Apps/goals/assists per club, crests mark transfers" },
           formation: { label: "Formations", kicker: "Tactical Fit", headline: "Change shape, change the game", tagline: "Season totals across four mainstream formations · average rating and goal contribution per game", desc: "Season totals and efficiency across four formations" },
           map: { label: "World Map", kicker: "Global Transfer Network", headline: "Player movement, drawn on the map", tagline: "Club locations and recent signing networks · hover for crests · click for transfer details", desc: "Club locations and signing network · hover for crests, click for transfers" },
+          compare: { label: "Compare", kicker: "Same-position head-to-head", headline: "One position, five answers", tagline: "Average rating and position-specific output across four formations · compare up to 5 players from the same position group", desc: "Up to 5 same-position players · ratings and output across four formations" },
         },
       },
     };
@@ -320,6 +368,7 @@ createApp({
       { key: "career", icon: "⌁", accent: "#0f766e", shadow: "rgba(15,118,110,.30)", wash: "linear-gradient(180deg,#ecfdf5 0%,#f4fdfa 420px,#ffffff 100%)", washStrong: "rgba(15,118,110,.11)", metric: "→" },
       { key: "formation", icon: "▦", accent: "#b45309", shadow: "rgba(180,83,9,.30)", wash: "linear-gradient(180deg,#fffbeb 0%,#fffdf5 420px,#ffffff 100%)", washStrong: "rgba(180,83,9,.12)", metric: "×4" },
       { key: "map", icon: "◉", accent: "#334155", shadow: "rgba(51,65,85,.30)", wash: "linear-gradient(180deg,#f1f5f9 0%,#f8fafc 420px,#ffffff 100%)", washStrong: "rgba(51,65,85,.12)", metric: "—" },
+      { key: "compare", icon: "⇄", accent: "#7c3aed", shadow: "rgba(124,58,237,.32)", wash: "linear-gradient(180deg,#f5f3ff 0%,#faf8ff 420px,#ffffff 100%)", washStrong: "rgba(124,58,237,.11)", metric: "≤5" },
     ];
     const tabs = computed(() => baseTabs.map(t => ({ ...t, ...L.value.tabs[t.key] })));
     const activeTab = ref("trend");
@@ -329,7 +378,7 @@ createApp({
     try { isDark.value = localStorage.getItem("fv-theme") === "dark"; } catch (e) {}
     function applyTheme() { document.documentElement.dataset.theme = isDark.value ? "dark" : "light"; }
     applyTheme();
-    const DARK_ACCENT = { trend: "#a5b4fc", career: "#5eead4", formation: "#fcd34d", map: "#cbd5e1" };
+    const DARK_ACCENT = { trend: "#a5b4fc", career: "#5eead4", formation: "#fcd34d", map: "#cbd5e1", compare: "#c4b5fd" };
     const theme = computed(() => {
       const t = tabs.value.find(t => t.key === activeTab.value) || tabs.value[0];
       // 地图 Tab 的指标数 = 实际收录俱乐部数，避免硬编码过期值（未加载完成时显示占位符）
@@ -451,6 +500,7 @@ createApp({
       renderCompare();
       if (activeTab.value === "career") renderClubBar();
       if (activeTab.value === "map" && clubs.value.length) renderMap();
+      if (activeTab.value === "compare") renderCmpCharts();
     }
     // 文件名 slug：避免 é/ñ 等字符在部分浏览器下载时乱码
     function slugify(s) {
@@ -476,7 +526,11 @@ createApp({
       if (!c) return;
       const a = document.createElement("a");
       a.href = c.getDataURL({ type: "png", pixelRatio: 2, backgroundColor: ink().bg });
-      a.download = `${slugify(current.value?.name)}-${key}.png`;
+      // 对比页的文件名不带单个球员名（图里是多球员），避免下载后误认
+      const slug = (key === "cmpRating" || key === "cmpOutput")
+        ? `player-comparison-${key}`
+        : `${slugify(current.value?.name)}-${key}`;
+      a.download = `${slug}.png`;
       a.click();
     }
     function exportCSV(kind) {
@@ -612,13 +666,25 @@ createApp({
     const formationChart = ref(null);
     const efficiencyChart = ref(null);
     const clubBarChart = ref(null);
+    // 球员对比（第 5 栏）：注意 compare 已被身价折线叠加图占用，这里用 cmpRating / cmpOutput
+    const cmpRatingChart = ref(null);
+    const cmpOutputChart = ref(null);
     let instances = {};
     // key 与 instances 的 key 保持一致，便于 ResizeObserver 反查并 resize 对应实例
     const chartRefs = {
       trend: trendChart, compare: compareChart,
       formation: formationChart, efficiency: efficiencyChart, worldMap: worldMap,
       clubBar: clubBarChart,
+      cmpRating: cmpRatingChart, cmpOutput: cmpOutputChart,
     };
+    // 阵型卡片图（每套阵型一张）的容器是 v-for 动态生成的，按 "cmpForm:阵型" 登记进 chartRefs
+    const cmpFormRefs = {};
+    function setCmpFormRef(f, el) {
+      cmpFormRefs[f] = el || null;
+      if (el) chartRefs["cmpForm:" + f] = { value: el };
+      else delete chartRefs["cmpForm:" + f];
+      if (el) observeCharts();   // 新节点要及时挂上 ResizeObserver
+    }
 
     // 对比曲线配色：拉开色相/明度差，深色主题下也能分辨（避免相邻两条线撞色）
     const palette = ["#4f46e5", "#0ea5e9", "#16a34a", "#f59e0b", "#ef4444", "#a855f7", "#14b8a6", "#ec4899", "#64748b", "#f97316", "#84cc16", "#06b6d4"];
@@ -758,7 +824,7 @@ createApp({
     function isSelected(id) { return current.value?.id === id; }
 
     // ---- URL 路由：/#player/p01/trend ----
-    const TAB_KEYS = ["trend", "career", "formation", "map"];
+    const TAB_KEYS = ["trend", "career", "formation", "map", "compare"];
     function readHash() {
       const m = (location.hash || "").match(/^#player\/(p\d{2,3})\/([a-z]+)$/);
       return m && TAB_KEYS.includes(m[2]) ? { id: m[1], tab: m[2] } : null;
@@ -788,6 +854,7 @@ createApp({
         if (key === "career") { renderClubBar(); }
         if (key === "formation") { renderFormation(); renderEfficiency(); }
         if (key === "map") { loadClubs().then(renderMap).catch(e => console.warn("[map] loadClubs failed", e)); }
+        if (key === "compare") { renderCmpCharts(); }
       });
     }
 
@@ -1035,8 +1102,8 @@ createApp({
 
     // 位置差异化指标标签：GK→扑救/丢球, DF→解围/拦截, MF/FW→进球/助攻
     // metricKeys 给出对应的数据字段名，metricLabels 给出展示文案 —— 两者必须成对使用
-    function metricKeys() {
-      const g = current.value?.position_group;
+    function metricKeys(group) {
+      const g = group || current.value?.position_group;
       if (g === "GK") return { k1: "saves", k2: "conceded" };
       if (g === "DF") return { k1: "clearances", k2: "interceptions" };
       return { k1: "goals", k2: "assists" };
@@ -1096,8 +1163,8 @@ createApp({
         : `Goals ${p.goals || 0} · Assists ${p.assists || 0}`;
     }
 
-    function metricLabels() {
-      const g = current.value?.position_group;
+    function metricLabels(group) {
+      const g = group || current.value?.position_group;
       if (g === "GK") {
         return lang.value === "zh"
           ? { primary: "扑救", secondary: "丢球", axis: "扑救 / 丢球", eff: "场均扑救", gkHint: "门将位置主要展示扑救与丢球数据" }
@@ -1248,12 +1315,16 @@ createApp({
       }, true);
     }
 
+    // ECharts 默认 sans-serif，在 Windows 上会落到 Arial / 微软雅黑，与站点字体不一致
+    // → 统一成站点字体栈，图表里的中英文与数字才和页面其它文字协调
+    const CHART_FONT = '"IBM Plex Sans","IBM Plex Sans SC","PingFang SC","Microsoft YaHei",sans-serif';
+
     // -------- render: formation bars --------
     // v-if 会销毁图表容器，旧实例还绑在被移除的节点上 → 必须 dispose 后在当前节点重建
     function ensureChart(key, el) {
       const cur = instances[key];
       if (cur && cur.getDom() !== el) { cur.dispose(); instances[key] = null; }
-      if (!instances[key]) instances[key] = echarts.init(el);
+      if (!instances[key]) instances[key] = echarts.init(el, null, { textStyle: { fontFamily: CHART_FONT } });
       return instances[key];
     }
 
@@ -1323,6 +1394,250 @@ createApp({
       }, true);
     }
 
+    // -------- render: player compare（第 5 栏）--------
+    // 四套阵型固定顺序；对比只在同一位置组内进行，指标口径由 metricKeys/metricLabels 决定
+    const CMP_FORMATIONS = ["3-5-2", "4-2-3-1", "4-3-3", "4-4-2"];
+    // 每位已选球员固定一种颜色，选择标签、总览卡、图表系列共用，方便横向对上人
+    const CMP_COLORS = ["#4f46e5", "#0ea5e9", "#f59e0b", "#10b981", "#ec4899"];
+    const cmpColorOf = id => CMP_COLORS[Math.max(0, cmpIds.value.indexOf(id)) % CMP_COLORS.length];
+    const CMP_MAX = 5;
+    const cmpGroup = ref("");
+    const cmpSearch = ref("");
+    const cmpIds = ref([]);
+    const cmpData = ref({});
+    const cmpWarn = ref("");
+    let cmpTouched = false;
+
+    // 默认跟随当前球员的位置组（用户手动切换过位置组后不再覆盖）
+    watch(current, (p) => {
+      if (!cmpTouched && p && p.position_group) cmpGroup.value = p.position_group;
+    });
+
+    // 候选过滤：姓名 / 俱乐部（中英）/ 国籍，纯字母时额外匹配拼音首字母与全拼
+    function cmpMatch(p) {
+      const q = cmpSearch.value.trim().toLowerCase();
+      if (!q) return true;
+      const hitText = [p.name, p.name_zh, p.current_club, p.club_zh, p.nationality, p.nationality_zh]
+        .some(v => (v || "").toLowerCase().includes(q));
+      if (hitText) return true;
+      if (!/^[a-z]+$/.test(q)) return false;
+      const ini = pyIndex.value[p.id] || "";
+      const full = pyFull.value[p.id] || "";
+      return ini.startsWith(q) || ini.includes(q) || (full && full.includes(q));
+    }
+    const cmpCandidates = computed(() =>
+      players.value.filter(p => p.position_group === cmpGroup.value && cmpMatch(p)));
+    // 已选球员（来自名册列表，数据未到达前也能显示名字）
+    const cmpPlayers = computed(() => cmpIds.value.map(id => playersById.value[id]).filter(Boolean));
+    const cmpLoading = computed(() => cmpIds.value.some(id => !cmpData.value[id]));
+
+    function setCmpGroup(g) {
+      cmpTouched = true;
+      if (g === cmpGroup.value) return;
+      cmpGroup.value = g;
+      cmpIds.value = [];
+      cmpData.value = {};
+      cmpWarn.value = "";
+      cmpSearch.value = "";
+      renderCmpCharts();
+    }
+    function toggleCmp(id) {
+      const i = cmpIds.value.indexOf(id);
+      if (i >= 0) {
+        cmpIds.value = cmpIds.value.filter(x => x !== id);
+        cmpWarn.value = "";
+      } else {
+        if (cmpIds.value.length >= CMP_MAX) { cmpWarn.value = tf(L.value.cmpMax, { n: CMP_MAX }); return; }
+        cmpIds.value = [...cmpIds.value, id];
+        loadCmpPlayer(id);
+      }
+      renderCmpCharts();
+    }
+    async function loadCmpPlayer(id) {
+      try {
+        const d = await fetchJSON(`/api/player?id=${id}`, `cmp:${id}`);
+        cmpData.value = { ...cmpData.value, [id]: d };
+        renderCmpCharts();
+      } catch (e) {
+        if (e.name !== "AbortError") console.warn("[cmp] player load failed", id, e);
+      }
+    }
+    function clearCmp() {
+      cmpIds.value = [];
+      cmpData.value = {};
+      cmpWarn.value = "";
+      renderCmpCharts();
+    }
+
+    const cmpLabels = computed(() => metricLabels(cmpGroup.value));
+    // 每位已选球员：四套阵型单元格 + 合计（总出场 / 总主指标 / 总副指标 / 按出场加权评分 / 最佳阵型）
+    const cmpRows = computed(() => {
+      const mk = metricKeys(cmpGroup.value);
+      return cmpIds.value.map(id => cmpData.value[id]).filter(Boolean).map((p, i) => {
+        const fp = p.formation_performance || {};
+        const cells = CMP_FORMATIONS.map(f => {
+          const v = fp[f] || null;
+          return {
+            f,
+            apps: v ? (v.apps || 0) : 0,
+            rating: v && v.avg_rating != null ? v.avg_rating : null,
+            k1: v ? (v[mk.k1] || 0) : 0,
+            k2: v ? (v[mk.k2] || 0) : 0,
+          };
+        });
+        let apps = 0, k1 = 0, k2 = 0, wsum = 0, wapps = 0, best = null;
+        cells.forEach(x => {
+          apps += x.apps; k1 += x.k1; k2 += x.k2;
+          if (x.apps > 0 && x.rating != null) { wsum += x.rating * x.apps; wapps += x.apps; }
+          if (x.rating != null && (!best || x.rating > best.rating)) best = x;
+        });
+        const li = playersById.value[p.id] || {};
+        const hist = p.market_value_history || [];
+        const value = li.current_value_m_eur != null
+          ? li.current_value_m_eur
+          : (hist.length ? hist[hist.length - 1].value_m_eur : "—");
+        return {
+          id: p.id, name: nm(p), photo: p.photo_url, value,
+          color: CMP_COLORS[i % CMP_COLORS.length],
+          pos: [posNm(p.position, p.position_zh), pgNm(p.position_group, p.position_group_zh)].filter(Boolean).join(" · "),
+          club: clubNm(p.current_club, p.club_zh),
+          cells, apps, k1, k2,
+          rating: wapps ? +(wsum / wapps).toFixed(2) : null,
+          best,
+        };
+      });
+    });
+
+    function renderCmpCharts() {
+      renderCmpRating(); renderCmpOutput(); renderCmpFormCharts();
+      // 卡片是 v-else 才挂载的，首次满 2 人时本轮 ref 尚未就绪，等 DOM 更新后再画一次
+      nextTick(() => renderCmpFormCharts());
+    }
+
+    function renderCmpRating() {
+      const el = cmpRatingChart.value;
+      if (!el || !el.offsetWidth) return;   // Tab 隐藏时容器宽 0，交给 switchTab 的 nextTick 重画
+      const c = ensureChart("cmpRating", el);
+      c.resize();
+      const k = ink();
+      const rows = cmpRows.value;
+      if (!rows.some(r => r.cells.some(x => x.rating != null))) {
+        c.setOption({ series: [], xAxis: { show: false }, yAxis: { show: false },
+          graphic: [{ type: "text", left: "center", top: "middle",
+            style: { text: L.value.cmpEmpty, fill: k.label, fontSize: 14 } }] }, true);
+        return;
+      }
+      c.setOption({
+        tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: k.bg, borderColor: k.border, textStyle: { color: k.text } },
+        legend: { type: "scroll", top: 0, textStyle: { color: k.text, fontSize: 11 } },
+        grid: { left: 8, right: 16, top: 40, bottom: 36, containLabel: true },
+        xAxis: { type: "category", data: CMP_FORMATIONS, axisLine: { lineStyle: { color: k.axis } }, axisTick: { alignWithLabel: true }, axisLabel: { color: k.label, fontSize: 12, fontWeight: 500 } },
+        yAxis: { type: "value", name: L.value.chartAvgRatingAxis, min: 6, max: 9, interval: 0.5, nameGap: 14, nameTextStyle: { color: k.label, align: "left" }, axisLine: { lineStyle: { color: k.axis } }, splitLine: { lineStyle: { color: k.split } }, axisLabel: { color: k.label, margin: 8 } },
+        series: rows.map(r => ({
+          name: r.name, type: "bar", barGap: "8%",
+          data: r.cells.map(x => x.rating),
+          itemStyle: { color: r.color },
+          emphasis: { focus: "series" },
+        })),
+      }, true);
+    }
+
+    function renderCmpOutput() {
+      const el = cmpOutputChart.value;
+      if (!el || !el.offsetWidth) return;
+      const c = ensureChart("cmpOutput", el);
+      c.resize();
+      const k = ink();
+      const g = cmpGroup.value;
+      const ml = metricLabels(cmpGroup.value);
+      const rows = cmpRows.value;
+      if (!rows.some(r => r.cells.some(x => x.apps > 0))) {
+        c.setOption({ series: [], xAxis: { show: false }, yAxis: { show: false },
+          graphic: [{ type: "text", left: "center", top: "middle",
+            style: { text: L.value.cmpEmpty, fill: k.label, fontSize: 14 } }] }, true);
+        return;
+      }
+      // 场均折算：门将→场均扑救、后卫→场均解围、中场/前锋→场均造球（进球+助攻）
+      const effOf = x => {
+        if (!x.apps) return null;
+        const num = (g === "GK" || g === "DF") ? x.k1 : x.k1 + x.k2;
+        return +(num / x.apps).toFixed(2);
+      };
+      c.setOption({
+        tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: k.bg, borderColor: k.border, textStyle: { color: k.text } },
+        legend: { type: "scroll", top: 0, textStyle: { color: k.text, fontSize: 11 } },
+        grid: { left: 8, right: 16, top: 40, bottom: 36, containLabel: true },
+        xAxis: { type: "category", data: CMP_FORMATIONS, axisLine: { lineStyle: { color: k.axis } }, axisTick: { alignWithLabel: true }, axisLabel: { color: k.label, fontSize: 12, fontWeight: 500 } },
+        yAxis: { type: "value", name: ml.eff, nameGap: 14, nameTextStyle: { color: k.label, align: "left" }, max: v => Math.max(0.4, Math.ceil(v.max * 1.15 * 10) / 10), axisLine: { lineStyle: { color: k.axis } }, splitLine: { lineStyle: { color: k.split } }, axisLabel: { color: k.label, margin: 8 } },
+        series: rows.map(r => ({
+          name: r.name, type: "bar", barGap: "8%",
+          data: r.cells.map(effOf),
+          itemStyle: { color: r.color },
+          emphasis: { focus: "series" },
+        })),
+      }, true);
+    }
+
+    // 阵型卡片图：x=已选球员，左轴双柱（总产出 k1/k2），右轴折线（场均评分）
+    function renderCmpFormCharts() {
+      const rows = cmpRows.value;
+      if (rows.length < 2) return;
+      const k = ink();
+      const ml = metricLabels(cmpGroup.value);
+      const mk = metricKeys(cmpGroup.value);
+      const names = rows.map(r => r.name);
+      // 球员名保持水平：过长时在「·」（中文名习惯分隔）或名字中段折成两行，
+      // 倾斜标签在小卡片里既费眼又难分辨，折行更清楚
+      const wrapName = n => {
+        const s = String(n || "");
+        const cut = lang.value === "zh" ? s.indexOf("·") : s.lastIndexOf(" ");
+        if (cut > 0 && s.length > 6) return s.slice(0, cut) + "\n" + s.slice(cut + 1);
+        if (s.length > 6) {
+          const mid = Math.ceil(s.length / 2);
+          return s.slice(0, mid) + "\n" + s.slice(mid);
+        }
+        return s;
+      };
+      const rawOf = (id, f) => (cmpData.value[id] || {}).formation_performance?.[f] || null;
+      // x 轴球员名用各自固定色（与选择标签、总览卡一致），一眼就能对上是谁
+      const richName = {};
+      rows.forEach((r, i) => { richName["c" + i] = { color: r.color, fontSize: 12, fontWeight: 600, lineHeight: 15, align: "center" }; });
+      const colorName = (val, i) => "{" + "c" + (i % rows.length) + "|" + wrapName(val) + "}";
+      CMP_FORMATIONS.forEach(f => {
+        const el = cmpFormRefs[f];
+        if (!el || !el.offsetWidth) return;   // Tab 隐藏 / 容器宽 0 时留给下次渲染
+        const c = ensureChart("cmpForm:" + f, el);
+        c.resize();
+        if (!rows.some(r => rawOf(r.id, f))) {
+          c.setOption({ series: [], xAxis: { show: false }, yAxis: { show: false },
+            graphic: [{ type: "text", left: "center", top: "middle",
+              style: { text: L.value.cmpEmpty, fill: k.label, fontSize: 13 } }] }, true);
+          return;
+        }
+        // 该阵型无数据的球员返回 null，柱/点留空而不是伪造 0
+        const vals = rows.map(r => rawOf(r.id, f));
+        c.setOption({
+          tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: k.bg, borderColor: k.border, textStyle: { color: k.text } },
+          legend: { top: 0, textStyle: { color: k.text, fontSize: 11 } },
+          grid: { left: 8, right: 12, top: 48, bottom: 8, containLabel: true },
+          xAxis: {
+            type: "category", data: names,
+            axisLine: { lineStyle: { color: k.axis } }, axisTick: { alignWithLabel: true },
+            axisLabel: { color: k.text, fontSize: 12, rotate: 0, interval: 0, hideOverlap: false, lineHeight: 15, formatter: colorName, rich: richName },
+          },
+          yAxis: [
+            { type: "value", alignTicks: true, name: ml.axis, nameGap: 14, nameTextStyle: { color: k.label, align: "left" }, axisLine: { lineStyle: { color: k.axis } }, splitLine: { lineStyle: { color: k.split } }, axisLabel: { color: k.label, margin: 8 } },
+            { type: "value", alignTicks: true, name: L.value.chartAvgRatingAxis, min: 6, max: 9, interval: 0.5, nameGap: 14, nameTextStyle: { color: k.label, align: "right" }, axisLine: { lineStyle: { color: k.axis } }, splitLine: { show: false }, axisLabel: { color: k.label, margin: 8 } },
+          ],
+          series: [
+            { name: ml.primary, type: "bar", data: vals.map(v => (v ? (v[mk.k1] || 0) : null)), itemStyle: { color: "#4f46e5" }, label: { show: true, position: "top", color: k.text, fontSize: 10, distance: 4 } },
+            { name: ml.secondary, type: "bar", data: vals.map(v => (v ? (v[mk.k2] || 0) : null)), itemStyle: { color: "#1d70b8" }, label: { show: true, position: "top", color: k.text, fontSize: 10, distance: 4 } },
+            { name: L.value.avgRating, type: "line", yAxisIndex: 1, data: vals.map(v => (v && v.avg_rating != null ? v.avg_rating : null)), symbol: "circle", symbolSize: 6, connectNulls: false, lineStyle: { color: "#16a34a", width: 2 }, itemStyle: { color: "#16a34a" }, label: { show: true, position: "top", color: k.text, fontSize: 10, distance: 4 } },
+          ],
+        }, true);
+      });
+    }
+
     // -------- render: club bar (career tab) --------
     function renderClubBar() {
       const el = clubBarChart.value;
@@ -1336,12 +1651,20 @@ createApp({
       const ml = metricLabels();
       const mk = metricKeys();
       const names = hist.map(h => lang.value === "zh" ? (h.club_zh || h.club) : h.club);
+      // 俱乐部名同样保持水平：过长时折两行（英文优先在最后一个空格断开），避免倾斜文字难认
+      const wrapClub = n => {
+        const s = String(n || "");
+        if (s.length <= 8) return s;
+        const sp = s.lastIndexOf(" ");
+        const cut = lang.value === "en" && sp > 0 ? sp : Math.ceil(s.length / 2);
+        return s.slice(0, cut).trim() + "\n" + s.slice(cut).trim();
+      };
       c.setOption({
         tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: k.bg, borderColor: k.border, textStyle: { color: k.text } },
         legend: { top: 0, textStyle: { color: k.text, fontSize: 11 } },
-        grid: { left: 8, right: 12, top: 40, bottom: 40, containLabel: true },
+        grid: { left: 8, right: 12, top: 40, bottom: 8, containLabel: true },
         xAxis: { type: "category", data: names, axisLine: { lineStyle: { color: k.axis } }, axisTick: { alignWithLabel: true },
-          axisLabel: { color: k.label, fontSize: 11, rotate: names.length > 5 ? 20 : 0, hideOverlap: true } },
+          axisLabel: { color: k.text, fontSize: 12, rotate: 0, interval: 0, hideOverlap: false, lineHeight: 15, formatter: wrapClub } },
         yAxis: { type: "value", name: ml.axis, nameGap: 14, nameTextStyle: { color: k.label, align: "left" }, axisLine: { lineStyle: { color: k.axis } }, splitLine: { lineStyle: { color: k.split } }, axisLabel: { color: k.label, margin: 8 } },
         series: [
           { name: ml.primary, type: "bar", data: hist.map(h => h[mk.k1] || 0), itemStyle: { color: theme.value.accent } },
@@ -1498,6 +1821,8 @@ createApp({
       renderTrend(); renderCompare();
       // 分享链接直接落在「世界地图」时不会经过 switchTab，需要主动渲染一次
       if (activeTab.value === "map") loadClubs().then(renderMap).catch(e => console.warn("[map] loadClubs failed", e));
+      // 分享链接直接落在「球员对比」同理（图表容器此时已可见）
+      if (activeTab.value === "compare") renderCmpCharts();
       // 名册每 5 秒自动换一批；悬停、搜索、已选中球员或排序模式下暂停
       rotorTimer = setInterval(() => {
         if (!rosterPaused.value && !autoPaused.value && !searchQuery.value && sortBy.value === "random" && players.value.length) shuffleRoster();
@@ -1559,6 +1884,10 @@ createApp({
       formationDataPlayers, formationTotals,
       openPlayer, openClub, onMapYearChange, openFormationTab,
       showTop, scrollTop,
+      // 球员对比（第 5 栏）
+      playersById, cmpGroup, cmpSearch, cmpIds, cmpPlayers, cmpCandidates, cmpWarn, cmpLoading,
+      cmpLabels, cmpRows, cmpFormations: CMP_FORMATIONS, cmpMax: CMP_MAX, cmpColorOf,
+      setCmpGroup, toggleCmp, clearCmp, cmpRatingChart, cmpOutputChart, setCmpFormRef,
     };
   },
 }).mount("#app");

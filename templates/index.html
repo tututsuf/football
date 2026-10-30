@@ -169,7 +169,7 @@
 
   <!-- ===== Selected player banner（世界地图/职业生涯不显示：地图页只有俱乐部排行榜，职业生涯页已有 career-hero）===== -->
   <div class="section" v-if="current">
-    <div class="player-banner" v-show="activeTab !== 'map' && activeTab !== 'career'">
+    <div class="player-banner" v-show="activeTab !== 'map' && activeTab !== 'career' && activeTab !== 'compare'">
       <div class="avatar" :class="{ photo: current.photo_url }">
         <img v-if="current.photo_url" :src="current.photo_url" :alt="currentName" loading="lazy"
              @error="onLogoError($event, currentName)" />
@@ -526,6 +526,125 @@
         <h3>{{ (lang === 'zh' ? '阵型效率 · ' : 'Efficiency · ') + metricLabels().eff }}<span class="panel-tools"><span class="chart-hint">{{ L.zoomHint }}</span><button class="tool-btn" @click="exportChart('efficiency')">PNG</button></span></h3>
         <div ref="efficiencyChart" class="chart sm"></div>
       </div>
+    </div>
+    </transition>
+
+    <!-- ============ Tab 5: 球员对比 ============ -->
+    <transition name="page">
+    <div v-show="activeTab === 'compare'" class="tab-panel" key="compare">
+      <!-- 选择区：位置组 + 搜索 + 候选 + 已选 -->
+      <div class="panel cmp-picker">
+        <h3>{{ L.cmpTitle }}<span class="panel-tools"><span class="chart-hint">{{ L.cmpRule }}</span><input class="cmp-search" type="search" v-model="cmpSearch"
+                 :placeholder="L.cmpSearchPlaceholder" :aria-label="L.cmpSearchAria" /></span></h3>
+
+        <div class="cmp-group-row">
+          <span class="cmp-label">{{ L.cmpPickGroup }}</span>
+          <div class="pitch-selector">
+            <button class="pitch-chip" :class="{ on: cmpGroup === 'FW' }" @click="setCmpGroup('FW')">{{ L.posFW }}</button>
+            <button class="pitch-chip" :class="{ on: cmpGroup === 'MF' }" @click="setCmpGroup('MF')">{{ L.posMF }}</button>
+            <button class="pitch-chip" :class="{ on: cmpGroup === 'DF' }" @click="setCmpGroup('DF')">{{ L.posDF }}</button>
+            <button class="pitch-chip" :class="{ on: cmpGroup === 'GK' }" @click="setCmpGroup('GK')">{{ L.posGK }}</button>
+          </div>
+        </div>
+
+        <div class="cmp-candidates">
+          <button v-for="p in cmpCandidates" :key="p.id" type="button"
+                  class="cmp-cand" :class="{ on: cmpIds.includes(p.id) }"
+                  :aria-pressed="cmpIds.includes(p.id)" @click="toggleCmp(p.id)">
+            <img v-if="p.photo_url" :src="p.photo_url" :alt="nm(p)" loading="lazy" @error="onLogoError($event, nm(p))" />
+            <span v-else class="cmp-cand-letter">{{ nm(p).charAt(0) }}</span>
+            <span class="cmp-cand-main">
+              <span class="cmp-cand-name">{{ nm(p) }}</span>
+              <span class="cmp-cand-club">{{ clubNm(p.current_club, p.club_zh) }}</span>
+            </span>
+            <span class="cmp-cand-val">€{{ p.current_value_m_eur }}m</span>
+          </button>
+          <div v-if="!cmpCandidates.length" class="empty-state" style="grid-column: 1 / -1;">{{ L.cmpNoCandidate }}</div>
+        </div>
+
+        <div class="cmp-sel-row">
+          <span class="cmp-label">{{ L.cmpSelected }}</span>
+          <div class="cmp-chips">
+            <button v-for="p in cmpPlayers" :key="p.id" type="button" class="cmp-chip"
+                    :style="{ '--chip-color': cmpColorOf(p.id) }" @click="toggleCmp(p.id)">
+              <span class="cmp-chip-dot"></span>{{ nm(p) }}<span class="cmp-chip-x">×</span>
+            </button>
+            <span v-if="!cmpPlayers.length" class="cmp-sel-empty">{{ L.cmpNoneSelected }}</span>
+          </div>
+          <span class="cmp-count">{{ tf(L.cmpCount, { n: cmpIds.length, max: cmpMax }) }}</span>
+          <button v-if="cmpIds.length" type="button" class="tool-btn" @click="clearCmp">{{ L.cmpClear }}</button>
+        </div>
+        <div v-if="cmpWarn" class="cmp-warn">{{ cmpWarn }}</div>
+      </div>
+
+      <!-- 少于两人：只显示一处提示，避免多个面板各重复一遍 -->
+      <div class="panel" v-if="cmpRows.length < 2">
+        <div class="empty-state">{{ cmpLoading ? L.loadingData : L.cmpNeedTwo }}</div>
+      </div>
+
+      <template v-else>
+      <!-- 总览对比 -->
+      <div class="panel">
+        <h3>{{ L.cmpSummary }}</h3>
+        <div class="cmp-cards">
+          <div v-for="r in cmpRows" :key="r.id" class="cmp-card" :style="{ borderLeftColor: r.color }">
+            <div class="cmp-card-head">
+              <img v-if="r.photo" :src="r.photo" :alt="r.name" loading="lazy" @error="onLogoError($event, r.name)" />
+              <span v-else class="cmp-cand-letter">{{ r.name.charAt(0) }}</span>
+              <div class="cmp-card-id">
+                <div class="cmp-card-name"><span class="cmp-card-dot" :style="{ background: r.color }"></span>{{ r.name }}</div>
+                <div class="cmp-card-pos">{{ r.pos }}</div>
+              </div>
+              <span class="cmp-card-value">{{ r.value === '—' ? '—' : '€' + r.value + 'm' }}</span>
+            </div>
+            <div class="cmp-card-stats">
+              <div><b>{{ r.apps }}</b><span>{{ L.cmpTotalApps }}</span></div>
+              <div><b>{{ r.rating != null ? r.rating.toFixed(2) : '—' }}</b><span>{{ L.cmpWeighted }}</span></div>
+            </div>
+            <div class="cmp-card-best">
+              <span>{{ L.cmpBest }}</span>
+              <b>{{ r.best ? r.best.f : '—' }}</b>
+              <b class="accent">{{ r.best && r.best.rating != null ? r.best.rating.toFixed(2) : '—' }}</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阵型数据比较 -->
+      <div class="cmp-section-label">{{ L.cmpFormSection }}</div>
+      <div class="panel">
+        <div class="cmp-form-grid">
+          <div v-for="f in cmpFormations" :key="f" class="cmp-form-card">
+            <div class="cmp-form-head">
+              <span>{{ f }}</span>
+              <span>{{ L.cmpFormSub }}</span>
+            </div>
+            <div class="chart cmp-form-chart" :ref="el => setCmpFormRef(f, el)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 场均数据比较：两张图合并进一个面板，只保留一层外壳 -->
+      <div class="cmp-section-label">{{ L.cmpPerGameSection }}</div>
+      <div class="panel">
+        <div class="cmp-sub-head">
+          <span>{{ L.cmpRatingTitle }}</span>
+          <button class="tool-btn" @click="exportChart('cmpRating')">PNG</button>
+        </div>
+        <div ref="cmpRatingChart" class="chart sm"></div>
+        <div class="cmp-sub-head">
+          <span>{{ L.cmpOutputTitle }} · {{ cmpLabels.eff }}</span>
+          <button class="tool-btn" @click="exportChart('cmpOutput')">PNG</button>
+        </div>
+        <div ref="cmpOutputChart" class="chart sm"></div>
+        <div class="legend">
+          <span>{{ cmpLabels.eff }}</span>
+          <span>{{ L.cmpPerGame }}</span>
+          <span>{{ cmpLabels.primary }} / {{ cmpLabels.secondary }}</span>
+        </div>
+      </div>
+      </template>
+
     </div>
     </transition>
 
